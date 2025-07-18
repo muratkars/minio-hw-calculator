@@ -3,6 +3,21 @@
  * 
  * This file contains the official MinIO Field Architect recommendations
  * for hardware configurations and deployment best practices.
+ * 
+ * DEVELOPER NOTE: This is the single source of truth for all Field Architect
+ * rules and recommendations. Update this file when MinIO best practices change.
+ * 
+ * Used by:
+ * - src/utils/calculations.ts - For validation and configuration generation
+ * - src/components/Form.tsx - For minimum server count enforcement
+ * - src/components/FieldArchitectRecommendations.tsx - For displaying rules
+ * 
+ * Key Rules:
+ * - Minimum 4 servers for high availability
+ * - Minimum 400TB usable capacity
+ * - Minimum 92 CPU cores per server
+ * - Minimum 256GB RAM per server
+ * - Minimum 4 drives per server
  */
 
 export interface FieldArchitectRules {

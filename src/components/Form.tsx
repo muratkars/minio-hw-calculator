@@ -1,10 +1,35 @@
 import React, { useState, useEffect } from 'react';
 import { HardwareSpecs } from '../utils/dataLoader';
 import { ConfigurationResult, generateConfigurationWithValidation } from '../utils/calculations';
+import { FIELD_ARCHITECT_RULES } from '../config/field-architect-best-practices';
+
+interface FormData {
+  usableCapacity: number;
+  capacityUnit: string;
+  vendor: string;
+  serverSize: string;
+  driveCapacity: number;
+  erasureCoding: string;
+  customerName: string;
+  customerEmail: string;
+  customerCompany: string;
+  purchasePrice: number;
+  chassisModel: string;
+  cpuModel: string;
+  memoryModel: string;
+  numDimms: number;
+  numServers: number;
+  numStorageDrives: number;
+  nicModel: string;
+  numPorts: number;
+  isCustomConfiguration: boolean;
+}
 
 interface FormProps {
   hardwareSpecs: HardwareSpecs;
+  formData: FormData;
   onConfigurationUpdate: (config: ConfigurationResult) => void;
+  onFormDataUpdate: (formData: FormData) => void;
 }
 
 interface HardwareSpecsLocal {
@@ -78,21 +103,6 @@ interface HardwareSpecsLocal {
   };
 }
 
-interface FormData {
-  usableCapacity: number;
-  capacityUnit: string;
-  vendor: string;
-  serverSize: string;
-  driveCapacity: number;
-  erasureCoding: string;
-  customerName: string;
-  customerEmail: string;
-  customerCompany: string;
-  purchasePrice: number;
-  cpuCores: number;
-  memoryGB: number;
-}
-
 interface RecommendedConfig {
   servers: number;
   chassisModel: string;
@@ -106,45 +116,96 @@ interface RecommendedConfig {
   rackUnits: number;
 }
 
-const Form: React.FC<FormProps> = ({ hardwareSpecs: initialHardwareSpecs, onConfigurationUpdate }) => {
-  const [formData, setFormData] = useState<FormData>({
-    usableCapacity: 400, // Default to Field Architect minimum
-    capacityUnit: 'TB',
-    vendor: '',
-    serverSize: '',
-    driveCapacity: 15.36,
-    erasureCoding: 'EC 8:3',
-    customerName: '',
-    customerEmail: '',
-    customerCompany: '',
-    purchasePrice: 0,
-    cpuCores: 96, // Default to above Field Architect minimum
-    memoryGB: 256 // Default to Field Architect minimum
-  });
+const Form: React.FC<FormProps> = ({ hardwareSpecs: initialHardwareSpecs, formData, onConfigurationUpdate, onFormDataUpdate }) => {
 
   const [hardwareSpecs, setHardwareSpecs] = useState<HardwareSpecsLocal | null>(null);
   const [recommendedConfig, setRecommendedConfig] = useState<RecommendedConfig | null>(null);
+  const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
 
   useEffect(() => {
     // Convert the props hardwareSpecs to local format
     if (initialHardwareSpecs) {
       setHardwareSpecs(initialHardwareSpecs as HardwareSpecsLocal);
-      if (initialHardwareSpecs.vendors && Object.keys(initialHardwareSpecs.vendors).length > 0) {
+      if (initialHardwareSpecs.vendors && Object.keys(initialHardwareSpecs.vendors).length > 0 && !formData.vendor) {
         const defaultVendor = Object.keys(initialHardwareSpecs.vendors)[0];
-        setFormData(prev => ({ ...prev, vendor: defaultVendor }));
+        onFormDataUpdate({ ...formData, vendor: defaultVendor });
       }
     }
-  }, [initialHardwareSpecs]);
+  }, [initialHardwareSpecs, formData, onFormDataUpdate]);
 
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: ['usableCapacity', 'driveCapacity', 'purchasePrice', 'cpuCores', 'memoryGB'].includes(name)
-        ? parseFloat(value) || 0 
-        : value
-    }));
+    const newValue = ['usableCapacity', 'driveCapacity', 'purchasePrice', 'numDimms', 'numServers', 'numStorageDrives', 'numPorts'].includes(name)
+      ? parseFloat(value) || 0 
+      : value;
+    
+    const newData = { ...formData, [name]: newValue };
+      
+      // Auto-populate Advanced Options when server size is selected
+      if (name === 'serverSize' && value && hardwareSpecs && formData.vendor) {
+        const vendor = hardwareSpecs.vendors[formData.vendor];
+        const chassis = Object.values(vendor?.chassis || {}).find(c => c.size_category === value);
+        const recommendedCpu = hardwareSpecs.cpus.find(cpu => cpu.preferred === 1);
+        const recommendedMemory = hardwareSpecs.memory.find(mem => mem.preferred === 1);
+        
+        if (chassis) {
+          // Get max DIMM slots for the chassis
+          let maxDimms = 12;
+          if (chassis.model.includes('ASG-1115S-NE316R')) maxDimms = 12;
+          else if (chassis.model.includes('ASG-2115S-NE332R')) maxDimms = 24;
+          else if (chassis.model.includes('PowerEdge R7615')) maxDimms = 16;
+          else if (chassis.model.includes('PowerEdge R7715')) maxDimms = 32;
+          else if (chassis.model.includes('ProLiant DL325')) maxDimms = 16;
+          else if (chassis.model.includes('ProLiant DL345')) maxDimms = 32;
+          
+          newData.chassisModel = chassis.model;
+          newData.cpuModel = recommendedCpu?.model || '';
+          newData.memoryModel = recommendedMemory?.model || '';
+          newData.numDimms = maxDimms;
+          newData.numServers = 0; // Auto-select
+          newData.numStorageDrives = chassis.drive_bays;
+          newData.nicModel = ''; // Auto-select recommended NIC
+          newData.numPorts = 2; // Default to 2 ports
+          newData.isCustomConfiguration = false;
+        }
+      }
+      
+      // Check if user is making custom changes to auto-populated fields
+      if (['chassisModel', 'cpuModel', 'memoryModel', 'numDimms', 'numServers', 'numStorageDrives', 'nicModel', 'numPorts'].includes(name)) {
+        // Only mark as custom if the value differs from the recommended
+        if (formData.serverSize && hardwareSpecs && formData.vendor) {
+          const vendor = hardwareSpecs.vendors[formData.vendor];
+          const chassis = Object.values(vendor?.chassis || {}).find(c => c.size_category === formData.serverSize);
+          const recommendedCpu = hardwareSpecs.cpus.find(cpu => cpu.preferred === 1);
+          const recommendedMemory = hardwareSpecs.memory.find(mem => mem.preferred === 1);
+          
+          let isCustom = false;
+          if (name === 'chassisModel' && value !== chassis?.model) isCustom = true;
+          if (name === 'cpuModel' && value !== recommendedCpu?.model) isCustom = true;
+          if (name === 'memoryModel' && value !== recommendedMemory?.model) isCustom = true;
+          if (name === 'numServers' && parseFloat(value) !== 0) isCustom = true;
+          if (name === 'numStorageDrives' && parseFloat(value) !== chassis?.drive_bays) isCustom = true;
+          if (name === 'nicModel' && value !== '') isCustom = true; // Any non-auto NIC selection is custom
+          if (name === 'numPorts' && parseFloat(value) !== 2) isCustom = true;
+          
+          if (chassis) {
+            let maxDimms = 12;
+            if (chassis.model.includes('ASG-1115S-NE316R')) maxDimms = 12;
+            else if (chassis.model.includes('ASG-2115S-NE332R')) maxDimms = 24;
+            else if (chassis.model.includes('PowerEdge R7615')) maxDimms = 16;
+            else if (chassis.model.includes('PowerEdge R7715')) maxDimms = 32;
+            else if (chassis.model.includes('ProLiant DL325')) maxDimms = 16;
+            else if (chassis.model.includes('ProLiant DL345')) maxDimms = 32;
+            
+            if (name === 'numDimms' && parseFloat(value) !== maxDimms) isCustom = true;
+          }
+          
+          newData.isCustomConfiguration = isCustom || formData.isCustomConfiguration;
+        }
+      }
+      
+      onFormDataUpdate(newData);
   };
 
   const convertToTB = (capacity: number, unit: string): number => {
@@ -179,16 +240,29 @@ const Form: React.FC<FormProps> = ({ hardwareSpecs: initialHardwareSpecs, onConf
     // Calculate raw capacity needed
     const rawCapacityNeeded = usableCapacityTB / ecScheme.efficiency;
     
-    // Calculate drives per server
-    const drivesPerServer = suitableChassis.drive_bays;
+    // Use custom number of drives if specified, otherwise use chassis max
+    const drivesPerServer = formData.numStorageDrives || suitableChassis.drive_bays;
     const capacityPerServer = drivesPerServer * formData.driveCapacity;
     
-    // Calculate number of servers needed
-    const serversNeeded = Math.ceil(rawCapacityNeeded / capacityPerServer);
+    // Use custom number of servers if specified (> 0), otherwise calculate needed
+    let serversNeeded = formData.numServers > 0 
+      ? formData.numServers 
+      : Math.ceil(rawCapacityNeeded / capacityPerServer);
     
-    // Get recommended CPU and memory
-    const recommendedCPU = hardwareSpecs.cpus.find(cpu => cpu.preferred === 1) || hardwareSpecs.cpus[0];
-    const recommendedMemory = hardwareSpecs.memory.find(mem => mem.preferred === 1) || hardwareSpecs.memory[0];
+    // Apply Field Architect minimum server count rule
+    const minServersFieldArchitect = FIELD_ARCHITECT_RULES.servers.minimumCount;
+    serversNeeded = Math.max(serversNeeded, minServersFieldArchitect);
+    
+    // Get CPU and memory (use selected or fall back to recommended)
+    const selectedCpu = formData.cpuModel 
+      ? hardwareSpecs.cpus.find(cpu => cpu.model === formData.cpuModel)
+      : hardwareSpecs.cpus.find(cpu => cpu.preferred === 1) || hardwareSpecs.cpus[0];
+    
+    const selectedMemory = formData.memoryModel
+      ? hardwareSpecs.memory.find(mem => mem.model === formData.memoryModel)
+      : hardwareSpecs.memory.find(mem => mem.preferred === 1) || hardwareSpecs.memory[0];
+    
+    const totalMemoryGB = selectedMemory ? (selectedMemory.size_gb * formData.numDimms) : 256;
     
     // Get drive performance
     const selectedDrive = hardwareSpecs.storage_drives.find(drive => 
@@ -211,8 +285,8 @@ const Form: React.FC<FormProps> = ({ hardwareSpecs: initialHardwareSpecs, onConf
       chassisModel: suitableChassis.model,
       totalRawCapacity: serversNeeded * capacityPerServer,
       totalUsableCapacity: (serversNeeded * capacityPerServer) * ecScheme.efficiency,
-      cpu: recommendedCPU?.model || 'N/A',
-      memory: recommendedMemory ? `${recommendedMemory.size_gb}GB ${recommendedMemory.speed}` : 'N/A',
+      cpu: selectedCpu?.model || 'N/A',
+      memory: selectedMemory ? `${totalMemoryGB}GB (${formData.numDimms}x ${selectedMemory.size_gb}GB ${selectedMemory.speed})` : 'N/A',
       storagePerServer: capacityPerServer,
       totalBandwidth,
       totalPower,
@@ -242,13 +316,19 @@ const Form: React.FC<FormProps> = ({ hardwareSpecs: initialHardwareSpecs, onConf
             // Convert to the expected format for calculations
             const ecScheme = initialHardwareSpecs.erasure_coding.schemes[formData.erasureCoding];
             
+            // Calculate CPU cores and memory from selected models
+            const selectedCpu = initialHardwareSpecs.cpus.find(cpu => cpu.model === formData.cpuModel);
+            const selectedMemory = initialHardwareSpecs.memory.find(mem => mem.model === formData.memoryModel);
+            const cpuCores = selectedCpu?.cores || 96; // fallback
+            const totalMemoryGB = selectedMemory ? (selectedMemory.size_gb * formData.numDimms) : 256; // fallback
+            
             const validatedConfig = generateConfigurationWithValidation(
               convertToTB(formData.usableCapacity, formData.capacityUnit),
               ecScheme,
               chassis as any,
               selectedDrive as any,
-              formData.cpuCores,
-              formData.memoryGB,
+              cpuCores,
+              totalMemoryGB,
               formData.purchasePrice > 0 ? formData.purchasePrice : undefined
             );
             
@@ -258,8 +338,8 @@ const Form: React.FC<FormProps> = ({ hardwareSpecs: initialHardwareSpecs, onConf
             const configurationResult: ConfigurationResult = {
               servers: config.servers,
               chassisModel: config.chassisModel,
-              drivesPerServer: Math.floor(config.storagePerServer / formData.driveCapacity),
-              totalDrives: config.servers * Math.floor(config.storagePerServer / formData.driveCapacity),
+              drivesPerServer: formData.numStorageDrives,
+              totalDrives: config.servers * formData.numStorageDrives,
               rawCapacityTB: config.totalRawCapacity,
               usableCapacityTB: config.totalUsableCapacity,
               efficiency: config.totalUsableCapacity / config.totalRawCapacity,
@@ -483,40 +563,267 @@ const Form: React.FC<FormProps> = ({ hardwareSpecs: initialHardwareSpecs, onConf
                   </select>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      CPU Cores <span className="text-xs text-gray-500">(Min: 92)</span>
-                    </label>
-                    <input
-                      type="number"
-                      name="cpuCores"
-                      value={formData.cpuCores}
-                      onChange={handleInputChange}
-                      min="1"
-                      max="256"
-                      step="1"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="e.g., 96"
-                    />
-                  </div>
+                {/* Advanced Options Toggle */}
+                <div className="border-t pt-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowAdvancedOptions(!showAdvancedOptions)}
+                    className="flex items-center justify-between w-full text-left text-sm font-medium text-gray-700 hover:text-gray-900"
+                  >
+                    <span>Advanced Options</span>
+                    <span className={`transform transition-transform ${showAdvancedOptions ? 'rotate-180' : ''}`}>
+                      ▼
+                    </span>
+                  </button>
                   
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Memory (GB) <span className="text-xs text-gray-500">(Min: 256GB)</span>
-                    </label>
-                    <input
-                      type="number"
-                      name="memoryGB"
-                      value={formData.memoryGB}
-                      onChange={handleInputChange}
-                      min="1"
-                      max="2048"
-                      step="1"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="e.g., 512"
-                    />
-                  </div>
+                  {showAdvancedOptions && (
+                    <div className="mt-4 space-y-4 p-4 bg-gray-50 rounded-md">
+                      {/* Chassis Vendor/Model */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Chassis Vendor/Model
+                        </label>
+                        <select
+                          name="chassisModel"
+                          value={formData.chassisModel}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">Auto-select based on vendor and size</option>
+                          {formData.vendor && hardwareSpecs && Object.entries(hardwareSpecs.vendors[formData.vendor]?.chassis || {}).map(([key, chassis]) => (
+                            <option key={key} value={chassis.model}>
+                              {formData.vendor} {chassis.model}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                      
+                      {/* CPU Model */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          CPU Model <span className="text-xs text-gray-500">(Min: 92 cores)</span>
+                        </label>
+                        <select
+                          name="cpuModel"
+                          value={formData.cpuModel}
+                          onChange={handleInputChange}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">Auto-select recommended CPU</option>
+                          {hardwareSpecs && hardwareSpecs.cpus
+                            .filter(cpu => {
+                              // For now, all chassis use SP5 socket and all CPUs are AMD SP5
+                              // In the future, this can be enhanced with proper socket matching
+                              // Currently showing all compatible CPUs (AMD for SP5 chassis)
+                              return cpu.vendor === 'AMD'; // All current chassis support AMD CPUs
+                            })
+                            .sort((a, b) => a.preferred - b.preferred)
+                            .map(cpu => (
+                              <option key={cpu.model} value={cpu.model}>
+                                {cpu.vendor} {cpu.model} ({cpu.cores} cores)
+                                {cpu.preferred === 1 && ' (Recommended)'}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                      
+                      {/* Memory and DIMMs */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Memory Model <span className="text-xs text-gray-500">(Min: 256GB)</span>
+                          </label>
+                          <select
+                            name="memoryModel"
+                            value={formData.memoryModel}
+                            onChange={handleInputChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="">Auto-select recommended memory</option>
+                            {hardwareSpecs && hardwareSpecs.memory
+                              .sort((a, b) => a.preferred - b.preferred)
+                              .map(mem => (
+                                <option key={mem.model} value={mem.model}>
+                                  {mem.vendor} {mem.model} ({mem.size_gb}GB)
+                                  {mem.preferred === 1 && ' (Recommended)'}
+                                </option>
+                              ))}
+                          </select>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            # of DIMMs
+                          </label>
+                          <select
+                            name="numDimms"
+                            value={formData.numDimms}
+                            onChange={handleInputChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            {/* Generate DIMM options based on selected chassis */}
+                            {(() => {
+                              let maxDimms = 32; // Default fallback
+                              
+                              if (formData.vendor && formData.serverSize && hardwareSpecs) {
+                                const selectedChassis = Object.values(hardwareSpecs.vendors[formData.vendor]?.chassis || {})
+                                  .find(chassis => chassis.size_category === formData.serverSize);
+                                
+                                if (selectedChassis) {
+                                  // Extract DIMM count from memory slots description
+                                  if (selectedChassis.model.includes('ASG-1115S-NE316R')) maxDimms = 12;
+                                  else if (selectedChassis.model.includes('ASG-2115S-NE332R')) maxDimms = 24;
+                                  else if (selectedChassis.model.includes('PowerEdge R7615')) maxDimms = 16;
+                                  else if (selectedChassis.model.includes('PowerEdge R7715')) maxDimms = 32;
+                                  else if (selectedChassis.model.includes('ProLiant DL325')) maxDimms = 16;
+                                  else if (selectedChassis.model.includes('ProLiant DL345')) maxDimms = 32;
+                                }
+                              }
+                              
+                              const options = [];
+                              for (let i = 1; i <= maxDimms; i++) {
+                                options.push(
+                                  <option key={i} value={i}>
+                                    {i} {i === maxDimms && '(All slots)'}
+                                  </option>
+                                );
+                              }
+                              return options;
+                            })()}
+                          </select>
+                        </div>
+                      </div>
+                      
+                      {/* Total Memory Display */}
+                      {formData.memoryModel && formData.numDimms && hardwareSpecs && (
+                        <div className="bg-blue-50 p-3 rounded-md">
+                          <div className="text-sm text-blue-700">
+                            <strong>Total Memory:</strong> {
+                              (() => {
+                                const selectedMemory = hardwareSpecs.memory.find(mem => mem.model === formData.memoryModel);
+                                return selectedMemory ? (selectedMemory.size_gb * formData.numDimms) : 0;
+                              })()
+                            }GB
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Number of Servers and Storage Drives */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Number of Servers
+                          </label>
+                          <select
+                            name="numServers"
+                            value={formData.numServers}
+                            onChange={handleInputChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value={0}>Auto-select</option>
+                            {Array.from({ length: 20 }, (_, i) => i + 1).map(num => (
+                              <option key={num} value={num}>
+                                {num} {num === 1 ? 'server' : 'servers'}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Storage Drives per Server
+                          </label>
+                          <select
+                            name="numStorageDrives"
+                            value={formData.numStorageDrives}
+                            onChange={handleInputChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            {(() => {
+                              const maxDrives = formData.vendor && formData.serverSize && hardwareSpecs 
+                                ? Object.values(hardwareSpecs.vendors[formData.vendor]?.chassis || {})
+                                    .find(chassis => chassis.size_category === formData.serverSize)?.drive_bays || 32
+                                : 32;
+                              
+                              return Array.from({ length: maxDrives }, (_, i) => i + 1).map(num => (
+                                <option key={num} value={num}>
+                                  {num} {num === maxDrives ? `(max: ${maxDrives})` : 'drives'}
+                                </option>
+                              ));
+                            })()}
+                          </select>
+                        </div>
+                      </div>
+                      
+                      {/* Total Storage Display */}
+                      {formData.numStorageDrives && formData.driveCapacity && (
+                        <div className="bg-blue-50 p-3 rounded-md">
+                          <div className="text-sm text-blue-700">
+                            <strong>Storage per Server:</strong> {formData.numStorageDrives} × {formData.driveCapacity}TB = {(formData.numStorageDrives * formData.driveCapacity).toFixed(1)}TB
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* NIC Model and # of Ports */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            NIC Model
+                          </label>
+                          <select
+                            name="nicModel"
+                            value={formData.nicModel}
+                            onChange={handleInputChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value="">Auto-select recommended NIC</option>
+                            <option value="Intel X710-T2L">Intel X710-T2L (10GbE)</option>
+                            <option value="Intel X710-DA2">Intel X710-DA2 (10GbE SFP+)</option>
+                            <option value="Mellanox ConnectX-6 Dx">Mellanox ConnectX-6 Dx (25GbE)</option>
+                            <option value="Mellanox ConnectX-7">Mellanox ConnectX-7 (100GbE)</option>
+                            <option value="Broadcom 57414">Broadcom 57414 (25GbE)</option>
+                            <option value="Intel E810-CQDA2">Intel E810-CQDA2 (100GbE)</option>
+                            <option value="Mellanox ConnectX-6 Lx">Mellanox ConnectX-6 Lx (25GbE)</option>
+                            <option value="Intel X710-DA4">Intel X710-DA4 (10GbE Quad Port)</option>
+                            <option value="Broadcom 57508">Broadcom 57508 (50GbE)</option>
+                          </select>
+                        </div>
+                        
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            # of Ports
+                          </label>
+                          <select
+                            name="numPorts"
+                            value={formData.numPorts}
+                            onChange={handleInputChange}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          >
+                            <option value={1}>1 port</option>
+                            <option value={2}>2 ports</option>
+                            <option value={4}>4 ports</option>
+                          </select>
+                        </div>
+                      </div>
+                      
+                      {/* Purchase Price */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Purchase Price of Server (Optional)
+                        </label>
+                        <input
+                          type="number"
+                          name="purchasePrice"
+                          value={formData.purchasePrice}
+                          onChange={handleInputChange}
+                          min="0"
+                          step="1000"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          placeholder="Enter server purchase price"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -565,21 +872,6 @@ const Form: React.FC<FormProps> = ({ hardwareSpecs: initialHardwareSpecs, onConf
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Purchase Price (Optional)
-                  </label>
-                  <input
-                    type="number"
-                    name="purchasePrice"
-                    value={formData.purchasePrice}
-                    onChange={handleInputChange}
-                    min="0"
-                    step="1000"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter total purchase price"
-                  />
-                </div>
               </div>
             </div>
 
@@ -608,9 +900,9 @@ const Form: React.FC<FormProps> = ({ hardwareSpecs: initialHardwareSpecs, onConf
         {/* Recommended Configuration */}
         <div className="space-y-6">
           {recommendedConfig ? (
-            <div className="bg-blue-50 p-6 rounded-lg">
-              <h2 className="text-xl font-semibold mb-4 text-blue-900">
-                Recommended Configuration
+            <div className={`p-6 rounded-lg ${formData.isCustomConfiguration ? 'bg-orange-50 border-2 border-orange-200' : 'bg-blue-50'}`}>
+              <h2 className={`text-xl font-semibold mb-4 ${formData.isCustomConfiguration ? 'text-orange-900' : 'text-blue-900'}`}>
+                {formData.isCustomConfiguration ? 'Custom Configuration' : 'Recommended Configuration'}
               </h2>
               
               <div className="space-y-4">
@@ -642,6 +934,12 @@ const Form: React.FC<FormProps> = ({ hardwareSpecs: initialHardwareSpecs, onConf
                     <div>
                       <span className="font-medium">Memory:</span>
                       <div className="text-sm">{recommendedConfig.memory}</div>
+                    </div>
+                    <div>
+                      <span className="font-medium">Storage Drives:</span>
+                      <div className="text-sm">
+                        {formData.numStorageDrives} × {formData.driveCapacity}TB = {(formData.numStorageDrives * formData.driveCapacity).toFixed(1)}TB per server
+                      </div>
                     </div>
                     <div>
                       <span className="font-medium">Total Bandwidth:</span>

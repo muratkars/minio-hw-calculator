@@ -6,9 +6,32 @@ import { loadHardwareSpecs, HardwareSpecs } from './utils/dataLoader';
 import { ConfigurationResult } from './utils/calculations';
 import './App.css';
 
+interface FormData {
+  usableCapacity: number;
+  capacityUnit: string;
+  vendor: string;
+  serverSize: string;
+  driveCapacity: number;
+  erasureCoding: string;
+  customerName: string;
+  customerEmail: string;
+  customerCompany: string;
+  purchasePrice: number;
+  chassisModel: string;
+  cpuModel: string;
+  memoryModel: string;
+  numDimms: number;
+  numServers: number;
+  numStorageDrives: number;
+  nicModel: string;
+  numPorts: number;
+  isCustomConfiguration: boolean;
+}
+
 interface AppState {
   hardwareSpecs: HardwareSpecs | null;
   currentConfig: ConfigurationResult | null;
+  formData: FormData;
   loading: boolean;
   error: string | null;
 }
@@ -17,6 +40,27 @@ const App: React.FC = () => {
   const [state, setState] = useState<AppState>({
     hardwareSpecs: null,
     currentConfig: null,
+    formData: {
+      usableCapacity: 400, // Default to Field Architect minimum
+      capacityUnit: 'TB',
+      vendor: '',
+      serverSize: '',
+      driveCapacity: 15.36,
+      erasureCoding: 'EC 8:3',
+      customerName: '',
+      customerEmail: '',
+      customerCompany: '',
+      purchasePrice: 0,
+      chassisModel: '',
+      cpuModel: '',
+      memoryModel: '',
+      numDimms: 12, // Default recommendation
+      numServers: 0, // 0 means auto-select
+      numStorageDrives: 16,
+      nicModel: '',
+      numPorts: 2, // Default to 2 ports
+      isCustomConfiguration: false
+    },
     loading: true,
     error: null
   });
@@ -47,6 +91,10 @@ const App: React.FC = () => {
 
   const handleConfigurationUpdate = (config: ConfigurationResult) => {
     setState(prev => ({ ...prev, currentConfig: config }));
+  };
+
+  const handleFormDataUpdate = (formData: FormData) => {
+    setState(prev => ({ ...prev, formData }));
   };
 
   const handleExportConfiguration = () => {
@@ -216,7 +264,9 @@ const App: React.FC = () => {
         {activeTab === 'configure' && (
           <Form 
             hardwareSpecs={state.hardwareSpecs}
+            formData={state.formData}
             onConfigurationUpdate={handleConfigurationUpdate}
+            onFormDataUpdate={handleFormDataUpdate}
           />
         )}
         

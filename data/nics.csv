@@ -1,0 +1,10 @@
+Preferred,Vendor,Model,Speed,Ports,Form Factor,Interface,Features
+1,Intel,X710-T2L,10GbE,2,PCIe,RJ45,Dual Port 10GBASE-T
+1,Intel,X710-DA2,10GbE,2,PCIe,SFP+,Dual Port 10GbE SFP+
+2,Mellanox,ConnectX-6 Dx,25GbE,2,PCIe,SFP28,Dual Port 25GbE
+2,Mellanox,ConnectX-7,100GbE,2,PCIe,QSFP28,Dual Port 100GbE
+1,Broadcom,57414,25GbE,2,PCIe,SFP28,Dual Port 25GbE
+3,Intel,E810-CQDA2,100GbE,2,PCIe,QSFP28,Dual Port 100GbE
+3,Mellanox,ConnectX-6 Lx,25GbE,2,PCIe,SFP28,Dual Port 25GbE Ethernet
+2,Intel,X710-DA4,10GbE,4,PCIe,SFP+,Quad Port 10GbE SFP+
+3,Broadcom,57508,50GbE,2,PCIe,SFP28,Dual Port 50GbE
