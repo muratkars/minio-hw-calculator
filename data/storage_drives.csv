@@ -1,0 +1,8 @@
+Preferred,Vendor,Model,Mfg Part #,NVMe Gen,Form Factor,Interface,Technology,Capacity,Seq Read 128K (MB/s),Seq Write 128K (MB/s),Random Read 4K (IOPS),Random Write 4K (IOPS),Power Active / Idle (W),Tech Spec Sheet
+1,Solidigm,D5-P5336,SBFPFABV307T001,NVMe GEN4,E3.S 1T (7.5mm),Single Port,192 L QLC 3D NAND,30.72TB,7000,3000,1005000,156800,21/5,https://www.solidigm.com/content/dam/solidigm/en/site/products/technology/p5336-product-brief/documents/Solidigm-D5P5336-ProductBrief.pdf
+1,Solidigm,D5-P5336,SBFPFABV153T001,NVMe GEN4,E3.S 1T (7.5mm),EDSFF,192 L QLC 3D NAND,15.36TB,7000,3000,1005000,119600,21/5,https://www.solidigm.com/content/dam/solidigm/en/site/products/technology/p5336-product-brief/documents/Solidigm-D5P5336-ProductBrief.pdf
+2,Solidigm,D5-P5336,SBFPFABV076T001,NVMe GEN4,E3.S 1T (7.5mm),EDSFF,192 L QLC 3D NAND,7.68TB,6800,1800,770000,71600,15/5,https://www.solidigm.com/content/dam/solidigm/en/site/products/technology/p5336-product-brief/documents/Solidigm-D5P5336-ProductBrief.pdf
+2,Seagate,Nytro 5360H,XS15360TE70114,NVMe GEN4,E3.S 1T (7.5mm),Single Port,162 L TLC 3D NAND,15.36TB,7000,3500,1000000,150000,22/5,https://www.seagate.com/products/enterprise-drives/ssd/nytro-5000/
+2,Seagate,Nytro 5360H,XS30720TE70114,NVMe GEN4,E3.S 1T (7.5mm),Single Port,162 L TLC 3D NAND,30.72TB,7000,3500,1000000,200000,25/5,https://www.seagate.com/products/enterprise-drives/ssd/nytro-5000/
+3,Micron,9550 PRO,MTFDKBA15T3TFR,NVMe GEN4,E3.S 1T (7.5mm),Single Port,176 L TLC 3D NAND,15.36TB,6800,4200,950000,140000,20/4,https://www.micron.com/products/ssd/product-lines/9550
+3,Micron,9550 PRO,MTFDKBA30T7TFR,NVMe GEN4,E3.S 1T (7.5mm),Single Port,176 L TLC 3D NAND,30.72TB,6800,4200,950000,180000,23/4,https://www.micron.com/products/ssd/product-lines/9550

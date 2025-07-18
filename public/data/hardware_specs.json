@@ -1,0 +1,461 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "generated": "2024-07-17T15:55:00.000000",
+    "description": "MinIO Hardware Calculator - Hardware Specifications"
+  },
+  "vendors": {
+    "Supermicro": {
+      "name": "Supermicro",
+      "chassis": {
+        "ASG-2115S-NE332R": {
+          "model": "ASG-2115S-NE332R",
+          "form_factor": "2U",
+          "drive_bays": 32,
+          "drive_types": "E3.S",
+          "cpu_sockets": "2",
+          "memory_slots": "32",
+          "memory_max": "4TB",
+          "size_category": "large",
+          "psu": "2x 2000W",
+          "depth": "29.6\"",
+          "vendor_link": "https://www.supermicro.com/en/products/system/Storage/A+/ASG-2115S-NE332R.cfm",
+          "notes": "32x E3.S NVMe, AMD EPYC, optimal for large deployments",
+          "preferred": 1
+        },
+        "ASG-1115S-NE316R": {
+          "model": "ASG-1115S-NE316R",
+          "form_factor": "1U",
+          "drive_bays": 16,
+          "drive_types": "E3.S",
+          "cpu_sockets": "1",
+          "memory_slots": "8",
+          "memory_max": "1TB",
+          "size_category": "medium",
+          "psu": "1x 1600W",
+          "depth": "29.6\"",
+          "vendor_link": "https://www.supermicro.com/en/products/system/Storage/A+/ASG-1115S-NE316R.cfm",
+          "notes": "16x E3.S NVMe, AMD EPYC, cost-effective option",
+          "preferred": 2
+        }
+      },
+      "supported_sizes": ["medium", "large"]
+    },
+    "Dell": {
+      "name": "Dell",
+      "chassis": {
+        "PowerEdge R7615": {
+          "model": "PowerEdge R7615",
+          "form_factor": "1U",
+          "drive_bays": 12,
+          "drive_types": "NVMe",
+          "cpu_sockets": "1",
+          "memory_slots": "12",
+          "memory_max": "1.5TB",
+          "size_category": "small",
+          "psu": "1x 1400W",
+          "depth": "28.5\"",
+          "vendor_link": "https://www.dell.com/en-us/work/shop/povw/poweredge-r7615",
+          "notes": "12x NVMe, AMD EPYC, enterprise grade",
+          "preferred": 3
+        },
+        "PowerEdge R7715": {
+          "model": "PowerEdge R7715",
+          "form_factor": "2U",
+          "drive_bays": 24,
+          "drive_types": "NVMe",
+          "cpu_sockets": "2",
+          "memory_slots": "32",
+          "memory_max": "4TB",
+          "size_category": "large",
+          "psu": "2x 1400W",
+          "depth": "28.5\"",
+          "vendor_link": "https://www.dell.com/en-us/work/shop/povw/poweredge-r7715",
+          "notes": "24x NVMe, AMD EPYC, high-density storage",
+          "preferred": 2
+        }
+      },
+      "supported_sizes": ["small", "large"]
+    },
+    "HPE": {
+      "name": "HPE",
+      "chassis": {
+        "ProLiant DL325 Gen11": {
+          "model": "ProLiant DL325 Gen11",
+          "form_factor": "1U",
+          "drive_bays": 10,
+          "drive_types": "NVMe",
+          "cpu_sockets": "1",
+          "memory_slots": "16",
+          "memory_max": "2TB",
+          "size_category": "small",
+          "psu": "1x 800W",
+          "depth": "27.5\"",
+          "vendor_link": "https://www.hpe.com/us/en/servers/proliant-dl325.html",
+          "notes": "10x NVMe, AMD EPYC, entry-level option",
+          "preferred": 4
+        },
+        "ProLiant DL345 Gen11": {
+          "model": "ProLiant DL345 Gen11",
+          "form_factor": "1U",
+          "drive_bays": 24,
+          "drive_types": "NVMe",
+          "cpu_sockets": "1",
+          "memory_slots": "16",
+          "memory_max": "2TB",
+          "size_category": "medium",
+          "psu": "1x 1600W",
+          "depth": "27.5\"",
+          "vendor_link": "https://www.hpe.com/us/en/servers/proliant-dl345.html",
+          "notes": "24x NVMe, AMD EPYC, balanced performance",
+          "preferred": 3
+        }
+      },
+      "supported_sizes": ["small", "medium"]
+    }
+  },
+  "storage_drives": [
+    {
+      "vendor": "Solidigm",
+      "model": "D5-P5336",
+      "part_number": "SSDPF21H030TA",
+      "nvme_gen": "Gen4",
+      "form_factor": "E3.S",
+      "interface": "PCIe 4.0",
+      "technology": "TLC 3D NAND",
+      "capacity_tb": 30.72,
+      "capacity_raw": "30.72TB",
+      "seq_read_mbps": 7000,
+      "seq_write_mbps": 3000,
+      "random_read_iops": 750000,
+      "random_write_iops": 25000,
+      "power_active_w": 25,
+      "power_idle_w": 5,
+      "power_raw": "25/5",
+      "tech_spec_url": "https://www.solidigm.com/products/data-center/d5/p5336.html",
+      "preferred": 1
+    },
+    {
+      "vendor": "Solidigm",
+      "model": "D5-P5336",
+      "part_number": "SSDPF21H015TA",
+      "nvme_gen": "Gen4",
+      "form_factor": "E3.S",
+      "interface": "PCIe 4.0",
+      "technology": "TLC 3D NAND",
+      "capacity_tb": 15.36,
+      "capacity_raw": "15.36TB",
+      "seq_read_mbps": 7000,
+      "seq_write_mbps": 3000,
+      "random_read_iops": 750000,
+      "random_write_iops": 25000,
+      "power_active_w": 20,
+      "power_idle_w": 4,
+      "power_raw": "20/4",
+      "tech_spec_url": "https://www.solidigm.com/products/data-center/d5/p5336.html",
+      "preferred": 1
+    },
+    {
+      "vendor": "Solidigm",
+      "model": "D5-P5336",
+      "part_number": "SSDPF21H007TA",
+      "nvme_gen": "Gen4",
+      "form_factor": "E3.S",
+      "interface": "PCIe 4.0",
+      "technology": "TLC 3D NAND",
+      "capacity_tb": 7.68,
+      "capacity_raw": "7.68TB",
+      "seq_read_mbps": 7000,
+      "seq_write_mbps": 3000,
+      "random_read_iops": 750000,
+      "random_write_iops": 25000,
+      "power_active_w": 15,
+      "power_idle_w": 3,
+      "power_raw": "15/3",
+      "tech_spec_url": "https://www.solidigm.com/products/data-center/d5/p5336.html",
+      "preferred": 2
+    },
+    {
+      "vendor": "Seagate",
+      "model": "Nytro 5360H",
+      "part_number": "XS30720TE70014",
+      "nvme_gen": "Gen4",
+      "form_factor": "E3.S",
+      "interface": "PCIe 4.0",
+      "technology": "TLC 3D NAND",
+      "capacity_tb": 30.72,
+      "capacity_raw": "30.72TB",
+      "seq_read_mbps": 6800,
+      "seq_write_mbps": 2900,
+      "random_read_iops": 700000,
+      "random_write_iops": 23000,
+      "power_active_w": 26,
+      "power_idle_w": 5,
+      "power_raw": "26/5",
+      "tech_spec_url": "https://www.seagate.com/products/enterprise-drives/ssd/nytro-ssd/",
+      "preferred": 2
+    },
+    {
+      "vendor": "Seagate",
+      "model": "Nytro 5360H",
+      "part_number": "XS15360TE70014",
+      "nvme_gen": "Gen4",
+      "form_factor": "E3.S",
+      "interface": "PCIe 4.0",
+      "technology": "TLC 3D NAND",
+      "capacity_tb": 15.36,
+      "capacity_raw": "15.36TB",
+      "seq_read_mbps": 6800,
+      "seq_write_mbps": 2900,
+      "random_read_iops": 700000,
+      "random_write_iops": 23000,
+      "power_active_w": 22,
+      "power_idle_w": 4,
+      "power_raw": "22/4",
+      "tech_spec_url": "https://www.seagate.com/products/enterprise-drives/ssd/nytro-ssd/",
+      "preferred": 2
+    },
+    {
+      "vendor": "Micron",
+      "model": "9550 PRO",
+      "part_number": "MTFDKBA30T4TFS",
+      "nvme_gen": "Gen4",
+      "form_factor": "E3.S",
+      "interface": "PCIe 4.0",
+      "technology": "176-layer TLC NAND",
+      "capacity_tb": 30.72,
+      "capacity_raw": "30.72TB",
+      "seq_read_mbps": 6900,
+      "seq_write_mbps": 3100,
+      "random_read_iops": 720000,
+      "random_write_iops": 24000,
+      "power_active_w": 24,
+      "power_idle_w": 5,
+      "power_raw": "24/5",
+      "tech_spec_url": "https://www.micron.com/products/ssd/product-lines/9550",
+      "preferred": 3
+    },
+    {
+      "vendor": "Micron",
+      "model": "9550 PRO",
+      "part_number": "MTFDKBA15T4TFS",
+      "nvme_gen": "Gen4",
+      "form_factor": "E3.S",
+      "interface": "PCIe 4.0",
+      "technology": "176-layer TLC NAND",
+      "capacity_tb": 15.36,
+      "capacity_raw": "15.36TB",
+      "seq_read_mbps": 6900,
+      "seq_write_mbps": 3100,
+      "random_read_iops": 720000,
+      "random_write_iops": 24000,
+      "power_active_w": 19,
+      "power_idle_w": 4,
+      "power_raw": "19/4",
+      "tech_spec_url": "https://www.micron.com/products/ssd/product-lines/9550",
+      "preferred": 3
+    }
+  ],
+  "cpus": [
+    {
+      "vendor": "AMD",
+      "model": "EPYC 9554",
+      "line": "EPYC 9000",
+      "cores": 64,
+      "threads": 128,
+      "boost_clock": "3.75 GHz",
+      "base_clock": "3.1 GHz",
+      "l3_cache": "256 MB",
+      "tdp": "360W",
+      "memory_type": "DDR5",
+      "memory_channels": 12,
+      "max_memory_freq": 4800,
+      "memory_bandwidth": 460.8,
+      "pcie_lanes": 128,
+      "socket_support": "1P/2P",
+      "generation": "4th Gen",
+      "year": 2022,
+      "codename": "Genoa",
+      "architecture": "Zen 4",
+      "socket": "SP5",
+      "preferred": 1
+    },
+    {
+      "vendor": "AMD",
+      "model": "EPYC 9534",
+      "line": "EPYC 9000",
+      "cores": 64,
+      "threads": 128,
+      "boost_clock": "3.1 GHz",
+      "base_clock": "2.45 GHz",
+      "l3_cache": "256 MB",
+      "tdp": "280W",
+      "memory_type": "DDR5",
+      "memory_channels": 12,
+      "max_memory_freq": 4800,
+      "memory_bandwidth": 460.8,
+      "pcie_lanes": 128,
+      "socket_support": "1P/2P",
+      "generation": "4th Gen",
+      "year": 2022,
+      "codename": "Genoa",
+      "architecture": "Zen 4",
+      "socket": "SP5",
+      "preferred": 2
+    },
+    {
+      "vendor": "AMD",
+      "model": "EPYC 9454",
+      "line": "EPYC 9000",
+      "cores": 48,
+      "threads": 96,
+      "boost_clock": "3.8 GHz",
+      "base_clock": "2.75 GHz",
+      "l3_cache": "256 MB",
+      "tdp": "290W",
+      "memory_type": "DDR5",
+      "memory_channels": 12,
+      "max_memory_freq": 4800,
+      "memory_bandwidth": 460.8,
+      "pcie_lanes": 128,
+      "socket_support": "1P/2P",
+      "generation": "4th Gen",
+      "year": 2022,
+      "codename": "Genoa",
+      "architecture": "Zen 4",
+      "socket": "SP5",
+      "preferred": 1
+    },
+    {
+      "vendor": "Intel",
+      "model": "Xeon Platinum 8480+",
+      "line": "Xeon Scalable",
+      "cores": 56,
+      "threads": 112,
+      "boost_clock": "3.8 GHz",
+      "base_clock": "2.0 GHz",
+      "l3_cache": "105 MB",
+      "tdp": "350W",
+      "memory_type": "DDR5",
+      "memory_channels": 8,
+      "max_memory_freq": 4800,
+      "memory_bandwidth": 307.2,
+      "pcie_lanes": 80,
+      "socket_support": "1P/2P",
+      "generation": "4th Gen",
+      "year": 2023,
+      "codename": "Sapphire Rapids",
+      "architecture": "Golden Cove",
+      "socket": "LGA4677",
+      "preferred": 3
+    }
+  ],
+  "memory": [
+    {
+      "vendor": "Samsung",
+      "model": "M321R8GA0BB0-CQKZG",
+      "description": "DDR5-4800 ECC RDIMM",
+      "size_gb": 64,
+      "size_raw": "64GB",
+      "speed": "4800 MT/s",
+      "profile": "2Rx4",
+      "preferred": 1
+    },
+    {
+      "vendor": "Samsung",
+      "model": "M321R4GA0BB0-CQKZG",
+      "description": "DDR5-4800 ECC RDIMM",
+      "size_gb": 32,
+      "size_raw": "32GB",
+      "speed": "4800 MT/s",
+      "profile": "1Rx4",
+      "preferred": 1
+    },
+    {
+      "vendor": "Micron",
+      "model": "MTC40F2046S1RC64BA1",
+      "description": "DDR5-4800 ECC RDIMM",
+      "size_gb": 64,
+      "size_raw": "64GB",
+      "speed": "4800 MT/s",
+      "profile": "2Rx4",
+      "preferred": 2
+    },
+    {
+      "vendor": "SK Hynix",
+      "model": "HMCG94MEBRA093N",
+      "description": "DDR5-4800 ECC RDIMM",
+      "size_gb": 32,
+      "size_raw": "32GB",
+      "speed": "4800 MT/s",
+      "profile": "1Rx4",
+      "preferred": 2
+    }
+  ],
+  "boot_drives": [
+    {
+      "vendor": "Samsung",
+      "model": "PM9A3",
+      "part_number": "MZQL2960HCJR",
+      "form_factor": "M.2",
+      "capacity": "960GB",
+      "interface": "NVMe",
+      "preferred": 1
+    },
+    {
+      "vendor": "Micron",
+      "model": "7450 PRO",
+      "part_number": "MTFDKBA960TFR",
+      "form_factor": "M.2",
+      "capacity": "960GB",
+      "interface": "NVMe",
+      "preferred": 2
+    }
+  ],
+  "erasure_coding": {
+    "default_scheme": "EC 8:3",
+    "schemes": {
+      "EC 8:3": {
+        "data_blocks": 8,
+        "parity_blocks": 3,
+        "total_blocks": 11,
+        "efficiency": 0.7272727272727273,
+        "min_drives": 11,
+        "fault_tolerance": 3
+      },
+      "EC 8:2": {
+        "data_blocks": 8,
+        "parity_blocks": 2,
+        "total_blocks": 10,
+        "efficiency": 0.8,
+        "min_drives": 10,
+        "fault_tolerance": 2
+      },
+      "EC 8:4": {
+        "data_blocks": 8,
+        "parity_blocks": 4,
+        "total_blocks": 12,
+        "efficiency": 0.6666666666666666,
+        "min_drives": 12,
+        "fault_tolerance": 4
+      }
+    }
+  },
+  "size_categories": {
+    "small": {
+      "description": "1U servers with 8-16 drive bays",
+      "typical_form_factor": "1U",
+      "drive_bay_range": [8, 16]
+    },
+    "medium": {
+      "description": "1U servers with 16-24 drive bays",
+      "typical_form_factor": "1U",
+      "drive_bay_range": [16, 24]
+    },
+    "large": {
+      "description": "2U servers with 24-32+ drive bays",
+      "typical_form_factor": "2U",
+      "drive_bay_range": [24, 64]
+    }
+  }
+}

@@ -1,0 +1,7 @@
+Preferred,Vendor,Model,Form Factor,Drive Bay,Drive Type,CPU Sockets,Memory Slots,Memory Max,Size Category,PSU,Depth,Vendor Link,Notes
+2,Supermicro,ASG-2115S-NE332R,2U,32,E3.S NVMe,Single SP5,DDR5 24 DIMM slots (2DPC),768GB,large,Titanium Level (96%),30.8",https://www.supermicro.com/en/products/system/storage/2u/asg-2115s-ne332r,Recommended configuration
+1,Supermicro,ASG-1115S-NE316R,1U,16,E3.S NVMe,Single SP5,DDR5 12 DIMM slots (1DPC),384GB,medium,Titanium Level (96%),29.8",https://www.supermicro.com/en/products/system/storage/1u/asg-1115s-ne316r,Compact design
+3,Dell,PowerEdge R7615,1U,12,E3.S NVMe,Single SP5,DDR5 16 DIMM slots,512GB,medium,80 PLUS Platinum,28.5",https://www.dell.com/en-us/shop/povw/poweredge-r7615,Enterprise grade
+3,Dell,PowerEdge R7715,2U,24,E3.S NVMe,Single SP5,DDR5 32 DIMM slots,1TB,large,80 PLUS Titanium,29.0",https://www.dell.com/en-us/shop/povw/poweredge-r7715,High capacity
+3,HPE,ProLiant DL325 Gen11,1U,10,E3.S NVMe,Single SP5,DDR5 16 DIMM slots,512GB,small,80 PLUS Platinum,27.5",https://www.hpe.com/us/en/servers/proliant-dl300-servers.html,Entry level
+3,HPE,ProLiant DL345 Gen11,1U,24,E3.S NVMe,Single SP5,DDR5 32 DIMM slots,1TB,large,80 PLUS Titanium,29.5",https://www.hpe.com/us/en/servers/proliant-dl300-servers.html,High density

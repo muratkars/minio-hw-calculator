@@ -1,0 +1,5 @@
+Preferred,Vendor,Model,Mfg Part #,Form Factor,Capacity,Interface,Notes
+1,Samsung,PM991a,MZ9LQ512HBLU,M.2 2280,512GB,PCIe 3.0 x4,Boot drive for OS
+2,Kingston,NV2,SNV2S/500G,M.2 2280,500GB,PCIe 4.0 x4,Cost-effective option
+2,Crucial,P3,CT500P3SSD8,M.2 2280,500GB,PCIe 3.0 x4,Reliable performance
+3,WD,Blue SN580,WDS500G3B0C,M.2 2280,500GB,PCIe 4.0 x4,High performance

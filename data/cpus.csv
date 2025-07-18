@@ -1,0 +1,6 @@
+Preferred,Vendor,Model,Line,Cores,Threads,Boost Clock,Base Clock,L3 Cache,TDP,Memory,DDR Channels,Max DDR Freq. (1DPC),Per-Socket Theoretical Memory Bandwidth,PCIe® Gen 5 Lanes,2P/1P,Gen,Year,Codename,Architecture,Socket
+1,AMD,AMD EPYC™ 9755,EPYC 9005 (5th Gen),128,256,Up to 4.1 GHz,2.7 GHz,256 MB,500W,DDR5,12,6400,576,128,2P/1P,5th,2024,Turin,Zen 5 (Eldora),SP5
+2,AMD,AMD EPYC™ 9655P,EPYC 9005 (5th Gen),96,192,Up to 4.2 GHz,2.6 GHz,384 MB,360W,DDR5,12,6400,576,128,1P,5th,2024,Turin,Zen 5 (Eldora),SP5
+2,AMD,AMD EPYC™ 9965,EPYC 9005 (5th Gen),192,384,Up to 3.7 GHz,2.25 GHz,384 MB,500W,DDR5,12,6400,576,128,2P/1P,5th,2024,Turin Dense,Zen 5c (Prometheus),SP5
+3,AMD,AMD EPYC™ 9554,EPYC 9004 (4th Gen),64,128,Up to 3.75 GHz,3.1 GHz,256 MB,360W,DDR5,12,4800,460,128,2P/1P,4th,2022,Genoa,Zen 4,SP5
+3,AMD,AMD EPYC™ 9534,EPYC 9004 (4th Gen),64,128,Up to 3.7 GHz,2.45 GHz,256 MB,280W,DDR5,12,4800,460,128,2P/1P,4th,2022,Genoa,Zen 4,SP5
