@@ -12,12 +12,21 @@ import {
 } from '../config/field-architect-best-practices';
 
 export interface ErasureCodingScheme {
-    data_blocks: number;
-    parity_blocks: number;
-    total_blocks: number;
-    efficiency: number;
-    min_drives: number;
+    scheme_name: string;
+    data_shards: number;
+    parity_shards: number;
+    total_shards: number;
+    storage_efficiency: number;
     fault_tolerance: number;
+    min_drives: number;
+    recommended: boolean;
+    drive_distribution: number;
+    description: string;
+    // Legacy support
+    data_blocks?: number;
+    parity_blocks?: number;
+    total_blocks?: number;
+    efficiency?: number;
   }
   
   export interface StorageDrive {
@@ -92,17 +101,46 @@ export interface ErasureCodingScheme {
   
     return (value * fromMultiplier) / toMultiplier;
   }
+
+  /**
+   * Format capacity with appropriate unit (TB or PB) for better readability
+   */
+  export function formatCapacity(capacityTB: number): string {
+    if (capacityTB >= 1000) {
+      const capacityPB = capacityTB / 1000;
+      return `${capacityPB.toFixed(2)} PB`;
+    }
+    return `${capacityTB.toFixed(2)} TB`;
+  }
+
+  /**
+   * Format bandwidth with appropriate unit (GB/s to TB/s) for better readability
+   */
+  export function formatBandwidth(bandwidthGBps: number): string {
+    if (bandwidthGBps >= 1000) {
+      const bandwidthTBps = bandwidthGBps / 1000;
+      return `${bandwidthTBps.toFixed(2)} TB/s`;
+    }
+    return `${bandwidthGBps.toFixed(1)} GB/s`;
+  }
   
   /**
    * Calculate raw capacity needed based on usable capacity and erasure coding
+   * Uses standard efficiency calculation: Raw = Usable / Efficiency
    */
   export function calculateRawCapacity(usableCapacityTB: number, ecScheme: ErasureCodingScheme): number {
-    return usableCapacityTB / ecScheme.efficiency;
+    // Use new storage_efficiency if available, fallback to legacy efficiency
+    const efficiency = ecScheme.storage_efficiency || ecScheme.efficiency || 0.625;
+    return usableCapacityTB / efficiency;
   }
   
   /**
    * Calculate the optimal number of servers based on capacity requirements
    * Now includes Field Architect best practices enforcement
+   */
+  /**
+   * Calculate the optimal number of servers based on capacity requirements
+   * Following MinIO's erasure coding distribution logic
    */
   export function calculateServerCount(
     rawCapacityTB: number,
@@ -114,12 +152,18 @@ export interface ErasureCodingScheme {
     const serversNeeded = Math.ceil(rawCapacityTB / capacityPerServer);
     
     // Ensure we have enough drives for the erasure coding scheme
-    const minServersForEC = Math.ceil(ecScheme.min_drives / driveBaysPerServer);
+    const minDrives = ecScheme.min_drives || ecScheme.total_shards || ecScheme.total_blocks || 11;
+    const minServersForEC = Math.ceil(minDrives / driveBaysPerServer);
     
     // Apply Field Architect minimum server count rule
     const minServersFieldArchitect = FIELD_ARCHITECT_RULES.servers.minimumCount;
     
-    return Math.max(serversNeeded, minServersForEC, minServersFieldArchitect);
+    // MinIO works best when drive count per server is aligned with erasure set size
+    const ecSetSize = ecScheme.total_shards || ecScheme.total_blocks || 11;
+    const optimalDrivesPerServer = Math.ceil(driveBaysPerServer / ecSetSize) * ecSetSize;
+    const adjustedServersForAlignment = Math.ceil(rawCapacityTB / (driveCapacityTB * optimalDrivesPerServer));
+    
+    return Math.max(serversNeeded, minServersForEC, minServersFieldArchitect, adjustedServersForAlignment);
   }
   
   /**
@@ -256,7 +300,8 @@ export interface ErasureCodingScheme {
     const drivesPerServer = chassis.drive_bays;
     const totalDrives = servers * drivesPerServer;
     const actualRawCapacityTB = totalDrives * drive.capacity_tb;
-    const actualUsableCapacityTB = actualRawCapacityTB * ecScheme.efficiency;
+    const efficiency = ecScheme.storage_efficiency || ecScheme.efficiency || 0.625;
+    const actualUsableCapacityTB = actualRawCapacityTB * efficiency;
     
     const rackUnits = servers * (chassis.form_factor === '1U' ? 1 : 2);
     const performance = calculatePerformance(servers, drivesPerServer, drive);
@@ -278,7 +323,7 @@ export interface ErasureCodingScheme {
       totalDrives,
       rawCapacityTB: actualRawCapacityTB,
       usableCapacityTB: actualUsableCapacityTB,
-      efficiency: ecScheme.efficiency,
+      efficiency: efficiency,
       rackUnits,
       performance,
       costAnalysis
@@ -382,20 +427,30 @@ export interface ErasureCodingScheme {
     const errors: string[] = [];
     
     const totalDrives = servers * drivesPerServer;
+    const minDrives = ecScheme.min_drives || ecScheme.total_shards || ecScheme.total_blocks || 11;
+    const ecSetSize = ecScheme.total_shards || ecScheme.total_blocks || 11;
+    const dataShards = ecScheme.data_shards || ecScheme.data_blocks || 8;
+    const parityShards = ecScheme.parity_shards || ecScheme.parity_blocks || 3;
     
     // Check if we have enough drives for erasure coding
-    if (totalDrives < ecScheme.min_drives) {
-      errors.push(`Minimum ${ecScheme.min_drives} drives required for ${ecScheme.data_blocks}:${ecScheme.parity_blocks} erasure coding`);
+    if (totalDrives < minDrives) {
+      errors.push(`Minimum ${minDrives} drives required for ${dataShards}:${parityShards} erasure coding`);
     }
     
     // Check if drive count per server is optimal for EC
-    const drivesPerECSet = ecScheme.total_blocks;
-    if (drivesPerServer % drivesPerECSet !== 0) {
-      warnings.push(`Drive count per server (${drivesPerServer}) is not a multiple of EC block count (${drivesPerECSet}). This may result in suboptimal storage utilization.`);
+    if (drivesPerServer % ecSetSize !== 0) {
+      warnings.push(`Drive count per server (${drivesPerServer}) is not a multiple of EC set size (${ecSetSize}). This may result in suboptimal storage utilization.`);
+    }
+    
+    // Check MinIO quorum requirements
+    const writeQuorum = parityShards >= (ecSetSize / 2) ? dataShards + 1 : dataShards;
+    
+    if (totalDrives < writeQuorum) {
+      errors.push(`Write quorum requires at least ${writeQuorum} drives for reliable operation`);
     }
     
     // Check if server count allows for proper EC distribution
-    if (servers < 2 && totalDrives > drivesPerECSet) {
+    if (servers < 2 && totalDrives > ecSetSize) {
       warnings.push('Consider using multiple servers for better fault tolerance and performance distribution.');
     }
     

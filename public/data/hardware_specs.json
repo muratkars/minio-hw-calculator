@@ -416,26 +416,34 @@
     "default_scheme": "EC 8:3",
     "schemes": {
       "EC 8:3": {
-        "data_blocks": 8,
+        "data_blocks": 5,
         "parity_blocks": 3,
-        "total_blocks": 11,
-        "efficiency": 0.7272727272727273,
-        "min_drives": 11,
+        "total_blocks": 8,
+        "efficiency": 0.625,
+        "min_drives": 8,
         "fault_tolerance": 3
       },
       "EC 8:2": {
-        "data_blocks": 8,
+        "data_blocks": 6,
         "parity_blocks": 2,
-        "total_blocks": 10,
-        "efficiency": 0.8,
-        "min_drives": 10,
+        "total_blocks": 8,
+        "efficiency": 0.750,
+        "min_drives": 8,
         "fault_tolerance": 2
       },
       "EC 8:4": {
+        "data_blocks": 4,
+        "parity_blocks": 4,
+        "total_blocks": 8,
+        "efficiency": 0.500,
+        "min_drives": 8,
+        "fault_tolerance": 4
+      },
+      "EC 12:4": {
         "data_blocks": 8,
         "parity_blocks": 4,
         "total_blocks": 12,
-        "efficiency": 0.6666666666666666,
+        "efficiency": 0.667,
         "min_drives": 12,
         "fault_tolerance": 4
       }

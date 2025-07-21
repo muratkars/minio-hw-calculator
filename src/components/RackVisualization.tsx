@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { ServerVisual, NetworkSwitchVisual, PDUVisual, ManagementServerVisual } from './ServerVisuals';
+import { formatBandwidth } from '../utils/calculations';
 
 interface RackVisualizationProps {
   servers: number;
@@ -434,7 +435,7 @@ const RackVisualization: React.FC<RackVisualizationProps> = ({
               <div><strong>Form Factor:</strong> {formFactor}</div>
               <div><strong>Drives/Server:</strong> {drivesPerServer}</div>
               <div><strong>Total Drives:</strong> {totalDrives}</div>
-              <div><strong>Bandwidth:</strong> {totalBandwidthGBps.toFixed(1)} GB/s</div>
+              <div><strong>Bandwidth:</strong> {formatBandwidth(totalBandwidthGBps)}</div>
             </div>
           </div>
         </div>

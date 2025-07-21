@@ -1,0 +1,13 @@
+scheme_name,data_shards,parity_shards,total_shards,storage_efficiency,fault_tolerance,min_drives,recommended,drive_distribution,description
+EC8:3,5,3,8,0.625,3,8,true,8,"EC8:3 - Recommended balanced configuration"
+EC12:4,8,4,12,0.667,4,12,true,12,"EC12:4 - Recommended for large deployments"
+EC4:2,2,2,4,0.500,2,4,false,4,"EC4:2 - Good balance of efficiency and protection"
+EC6:2,4,2,6,0.667,2,6,false,6,"EC6:2 - High efficiency with dual drive protection"
+EC8:2,6,2,8,0.750,2,8,false,8,"EC8:2 - Very high efficiency with dual drive protection"
+EC8:4,4,4,8,0.500,4,8,false,8,"EC8:4 - Maximum protection for critical data"
+EC10:2,8,2,10,0.800,2,10,false,10,"EC10:2 - Ultra-high efficiency with dual protection"
+EC10:4,6,4,10,0.600,4,10,false,10,"EC10:4 - Balanced efficiency with quad protection"
+EC12:2,10,2,12,0.833,2,12,false,12,"EC12:2 - High efficiency with dual protection"
+EC14:2,12,2,14,0.857,2,14,false,14,"EC14:2 - Maximum efficiency with dual protection"
+EC14:4,10,4,14,0.714,4,14,false,14,"EC14:4 - High efficiency with quad protection"
+EC16:4,12,4,16,0.750,4,16,false,16,"EC16:4 - Large scale with quad protection"

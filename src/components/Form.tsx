@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { HardwareSpecs } from '../utils/dataLoader';
-import { ConfigurationResult, generateConfigurationWithValidation } from '../utils/calculations';
+import { ConfigurationResult, generateConfigurationWithValidation, ErasureCodingScheme, formatCapacity, formatBandwidth } from '../utils/calculations';
 import { FIELD_ARCHITECT_RULES } from '../config/field-architect-best-practices';
+import ErasureCodingSelector from './ErasureCodingSelector';
+import { getDefaultSchemeName, getAutoRecommendedSchemeName, convertToScheme, loadErasureCodingOptions } from '../utils/erasureCodingLoader';
 
 interface FormData {
   usableCapacity: number;
@@ -23,6 +25,7 @@ interface FormData {
   nicModel: string;
   numPorts: number;
   isCustomConfiguration: boolean;
+  selectedECScheme?: ErasureCodingScheme;
 }
 
 interface FormProps {
@@ -121,14 +124,23 @@ const Form: React.FC<FormProps> = ({ hardwareSpecs: initialHardwareSpecs, formDa
   const [hardwareSpecs, setHardwareSpecs] = useState<HardwareSpecsLocal | null>(null);
   const [recommendedConfig, setRecommendedConfig] = useState<RecommendedConfig | null>(null);
   const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
+  const [ecValidation, setEcValidation] = useState<{ valid: boolean; warnings: string[]; errors: string[] }>({ valid: true, warnings: [], errors: [] });
 
   useEffect(() => {
     // Convert the props hardwareSpecs to local format
     if (initialHardwareSpecs) {
       setHardwareSpecs(initialHardwareSpecs as HardwareSpecsLocal);
+      
+      // Set default vendor if not set
       if (initialHardwareSpecs.vendors && Object.keys(initialHardwareSpecs.vendors).length > 0 && !formData.vendor) {
         const defaultVendor = Object.keys(initialHardwareSpecs.vendors)[0];
         onFormDataUpdate({ ...formData, vendor: defaultVendor });
+      }
+      
+      // Set default erasure coding scheme to recommended if not set
+      if (!formData.erasureCoding) {
+        const defaultScheme = getDefaultSchemeName();
+        onFormDataUpdate({ ...formData, erasureCoding: defaultScheme });
       }
     }
   }, [initialHardwareSpecs, formData, onFormDataUpdate]);
@@ -168,6 +180,33 @@ const Form: React.FC<FormProps> = ({ hardwareSpecs: initialHardwareSpecs, formDa
           newData.nicModel = ''; // Auto-select recommended NIC
           newData.numPorts = 2; // Default to 2 ports
           newData.isCustomConfiguration = false;
+          
+          // Auto-update erasure coding scheme based on potential drive count
+          const potentialDrives = chassis.drive_bays * (newData.numServers || 4); // Assume 4 servers if not set
+          const recommendedScheme = getAutoRecommendedSchemeName(potentialDrives);
+          if (recommendedScheme !== formData.erasureCoding) {
+            newData.erasureCoding = recommendedScheme;
+          }
+        }
+      }
+      
+      // Auto-update erasure coding when number of servers or drives changes
+      if ((name === 'numServers' || name === 'numStorageDrives') && hardwareSpecs) {
+        const totalDrives = (name === 'numServers' ? parseFloat(value) : formData.numServers || 4) * 
+                           (name === 'numStorageDrives' ? parseFloat(value) : formData.numStorageDrives);
+        
+        if (totalDrives > 0) {
+          const recommendedScheme = getAutoRecommendedSchemeName(totalDrives);
+          if (recommendedScheme !== formData.erasureCoding) {
+            newData.erasureCoding = recommendedScheme;
+            // Also update the selected scheme for the component
+            loadErasureCodingOptions().then(options => {
+              const option = options.find(opt => opt.scheme_name === recommendedScheme);
+              if (option) {
+                newData.selectedECScheme = convertToScheme(option);
+              }
+            });
+          }
         }
       }
       
@@ -230,19 +269,40 @@ const Form: React.FC<FormProps> = ({ hardwareSpecs: initialHardwareSpecs, formDa
     );
     if (!suitableChassis) return null;
 
-    // Get erasure coding scheme
-    const ecScheme = hardwareSpecs.erasure_coding.schemes[formData.erasureCoding];
-    if (!ecScheme) return null;
+    // Get erasure coding scheme - prioritize selectedECScheme if available
+    let ecScheme;
+    if (formData.selectedECScheme) {
+      // Use the efficiency from the selected scheme
+      ecScheme = {
+        data_blocks: formData.selectedECScheme.data_shards,
+        parity_blocks: formData.selectedECScheme.parity_shards,
+        efficiency: formData.selectedECScheme.storage_efficiency,
+        min_drives: formData.selectedECScheme.min_drives,
+        fault_tolerance: formData.selectedECScheme.fault_tolerance
+      };
+    } else {
+      // Fallback to legacy format or default
+      ecScheme = hardwareSpecs.erasure_coding?.schemes?.[formData.erasureCoding] || {
+        data_blocks: 5,
+        parity_blocks: 3,
+        efficiency: 0.625,
+        min_drives: 8,
+        fault_tolerance: 3
+      };
+    }
 
     // Convert capacity to TB
     const usableCapacityTB = convertToTB(formData.usableCapacity, formData.capacityUnit);
     
-    // Calculate raw capacity needed
-    const rawCapacityNeeded = usableCapacityTB / ecScheme.efficiency;
+    // Calculate raw capacity needed (if no usable capacity specified, use 100TB default)
+    const targetUsable = usableCapacityTB || 100;
+    const rawCapacityNeeded = targetUsable / ecScheme.efficiency;
     
     // Use custom number of drives if specified, otherwise use chassis max
     const drivesPerServer = formData.numStorageDrives || suitableChassis.drive_bays;
-    const capacityPerServer = drivesPerServer * formData.driveCapacity;
+    // Use default drive capacity if not specified
+    const driveCapacity = formData.driveCapacity || 8; // Default to 8TB
+    const capacityPerServer = drivesPerServer * driveCapacity;
     
     // Use custom number of servers if specified (> 0), otherwise calculate needed
     let serversNeeded = formData.numServers > 0 
@@ -266,8 +326,8 @@ const Form: React.FC<FormProps> = ({ hardwareSpecs: initialHardwareSpecs, formDa
     
     // Get drive performance
     const selectedDrive = hardwareSpecs.storage_drives.find(drive => 
-      drive.capacity_tb === formData.driveCapacity
-    );
+      drive.capacity_tb === driveCapacity
+    ) || hardwareSpecs.storage_drives[0]; // Fallback to first drive if not found
     
     // Calculate performance metrics
     const totalBandwidth = selectedDrive 
@@ -280,17 +340,21 @@ const Form: React.FC<FormProps> = ({ hardwareSpecs: initialHardwareSpecs, formDa
 
     const rackUnits = serversNeeded * (suitableChassis.form_factor === '1U' ? 1 : 2);
 
+    // Ensure we have valid values
+    const finalServers = serversNeeded || 1;
+    const finalCapacityPerServer = capacityPerServer || 128;
+    
     return {
-      servers: serversNeeded,
+      servers: finalServers,
       chassisModel: suitableChassis.model,
-      totalRawCapacity: serversNeeded * capacityPerServer,
-      totalUsableCapacity: (serversNeeded * capacityPerServer) * ecScheme.efficiency,
+      totalRawCapacity: finalServers * finalCapacityPerServer,
+      totalUsableCapacity: (finalServers * finalCapacityPerServer) * (ecScheme.efficiency || 0.625),
       cpu: selectedCpu?.model || 'N/A',
-      memory: selectedMemory ? `${totalMemoryGB}GB (${formData.numDimms}x ${selectedMemory.size_gb}GB ${selectedMemory.speed})` : 'N/A',
-      storagePerServer: capacityPerServer,
-      totalBandwidth,
-      totalPower,
-      rackUnits
+      memory: selectedMemory ? `${totalMemoryGB}GB (${formData.numDimms || 16}x ${selectedMemory.size_gb}GB ${selectedMemory.speed})` : '256GB',
+      storagePerServer: finalCapacityPerServer,
+      totalBandwidth: totalBandwidth || 0,
+      totalPower: totalPower || 0,
+      rackUnits: rackUnits || finalServers
     };
   };
 
@@ -322,9 +386,30 @@ const Form: React.FC<FormProps> = ({ hardwareSpecs: initialHardwareSpecs, formDa
             const cpuCores = selectedCpu?.cores || 96; // fallback
             const totalMemoryGB = selectedMemory ? (selectedMemory.size_gb * formData.numDimms) : 256; // fallback
             
+            // Use the selected EC scheme from the new component if available
+            const activeEcScheme = formData.selectedECScheme || {
+              scheme_name: ecScheme ? Object.keys(initialHardwareSpecs.erasure_coding.schemes).find(key => 
+                initialHardwareSpecs.erasure_coding.schemes[key] === ecScheme
+              ) || 'EC8:3' : 'EC8:3',
+              data_shards: ecScheme?.data_blocks || 8,
+              parity_shards: ecScheme?.parity_blocks || 3,
+              total_shards: ecScheme?.total_blocks || 11,
+              storage_efficiency: ecScheme?.efficiency || 0.727,
+              fault_tolerance: ecScheme?.fault_tolerance || 3,
+              min_drives: ecScheme?.min_drives || 11,
+              recommended: true,
+              drive_distribution: ecScheme?.total_blocks || 11,
+              description: 'Legacy scheme',
+              // Legacy support
+              data_blocks: ecScheme?.data_blocks || 8,
+              parity_blocks: ecScheme?.parity_blocks || 3,
+              total_blocks: ecScheme?.total_blocks || 11,
+              efficiency: ecScheme?.efficiency || 0.727
+            };
+
             const validatedConfig = generateConfigurationWithValidation(
               convertToTB(formData.usableCapacity, formData.capacityUnit),
-              ecScheme,
+              activeEcScheme,
               chassis as any,
               selectedDrive as any,
               cpuCores,
@@ -359,7 +444,7 @@ const Form: React.FC<FormProps> = ({ hardwareSpecs: initialHardwareSpecs, formDa
         }
       }
     }
-  }, [formData, hardwareSpecs, initialHardwareSpecs, onConfigurationUpdate]);
+  }, [formData, hardwareSpecs, initialHardwareSpecs, onConfigurationUpdate, formData.erasureCoding, formData.selectedECScheme]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -505,9 +590,23 @@ const Form: React.FC<FormProps> = ({ hardwareSpecs: initialHardwareSpecs, formDa
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Server Size
-                  </label>
+                  <div className="flex items-center gap-2 mb-2">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Server Size
+                    </label>
+                    <div className="relative group">
+                      <button 
+                        type="button"
+                        className="w-4 h-4 rounded-full bg-gray-100 text-gray-600 text-xs flex items-center justify-center hover:bg-gray-200"
+                      >
+                        ?
+                      </button>
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 w-80 p-3 bg-gray-900 text-white text-xs rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50">
+                        <div className="absolute top-full left-1/2 transform -translate-x-1/2 border-4 border-transparent border-t-gray-900"></div>
+                        <strong>Server Size:</strong> Server sizes are based on the T-Shirt size configuration available through Arrow as of now. If components should be changed or configuration needed for other hardware use the Advanced Options.
+                      </div>
+                    </div>
+                  </div>
                   <select
                     name="serverSize"
                     value={formData.serverSize}
@@ -545,23 +644,22 @@ const Form: React.FC<FormProps> = ({ hardwareSpecs: initialHardwareSpecs, formDa
                   </select>
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Erasure Coding
-                  </label>
-                  <select
-                    name="erasureCoding"
-                    value={formData.erasureCoding}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    {Object.entries(hardwareSpecs.erasure_coding.schemes).map(([scheme, config]) => (
-                      <option key={scheme} value={scheme}>
-                        {scheme} - {Math.round(config.efficiency * 100)}% efficiency, {config.fault_tolerance} drive fault tolerance
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                {/* New Erasure Coding Selector */}
+                <ErasureCodingSelector
+                  selectedScheme={formData.erasureCoding || getDefaultSchemeName()}
+                  totalDrives={(formData.numServers || 4) * (formData.numStorageDrives || 16)}
+                  onSchemeChange={(scheme) => {
+                    const newData = { 
+                      ...formData, 
+                      erasureCoding: scheme.scheme_name,
+                      selectedECScheme: scheme 
+                    };
+                    onFormDataUpdate(newData);
+                  }}
+                  onValidationChange={setEcValidation}
+                  allowManualOverride={true}
+                  showDetails={true}
+                />
                 
                 {/* Advanced Options Toggle */}
                 <div className="border-t pt-4">
@@ -759,7 +857,7 @@ const Form: React.FC<FormProps> = ({ hardwareSpecs: initialHardwareSpecs, formDa
                       {formData.numStorageDrives && formData.driveCapacity && (
                         <div className="bg-blue-50 p-3 rounded-md">
                           <div className="text-sm text-blue-700">
-                            <strong>Storage per Server:</strong> {formData.numStorageDrives} × {formData.driveCapacity}TB = {(formData.numStorageDrives * formData.driveCapacity).toFixed(1)}TB
+                            <strong>Storage per Server:</strong> {formData.numStorageDrives} × {formData.driveCapacity}TB = {formatCapacity(formData.numStorageDrives * formData.driveCapacity)}
                           </div>
                         </div>
                       )}
@@ -921,11 +1019,11 @@ const Form: React.FC<FormProps> = ({ hardwareSpecs: initialHardwareSpecs, formDa
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div>
                       <span className="font-medium">Raw Capacity:</span>
-                      <div className="text-lg">{recommendedConfig.totalRawCapacity.toFixed(2)} TB</div>
+                      <div className="text-lg">{formatCapacity(recommendedConfig.totalRawCapacity)}</div>
                     </div>
                     <div>
                       <span className="font-medium">Usable Capacity:</span>
-                      <div className="text-lg">{recommendedConfig.totalUsableCapacity.toFixed(2)} TB</div>
+                      <div className="text-lg">{formatCapacity(recommendedConfig.totalUsableCapacity)}</div>
                     </div>
                     <div>
                       <span className="font-medium">CPU:</span>
@@ -938,12 +1036,12 @@ const Form: React.FC<FormProps> = ({ hardwareSpecs: initialHardwareSpecs, formDa
                     <div>
                       <span className="font-medium">Storage Drives:</span>
                       <div className="text-sm">
-                        {formData.numStorageDrives} × {formData.driveCapacity}TB = {(formData.numStorageDrives * formData.driveCapacity).toFixed(1)}TB per server
+                        {formData.numStorageDrives} × {formData.driveCapacity}TB = {formatCapacity(formData.numStorageDrives * formData.driveCapacity)} per server
                       </div>
                     </div>
                     <div>
                       <span className="font-medium">Total Bandwidth:</span>
-                      <div className="text-lg">{recommendedConfig.totalBandwidth.toFixed(1)} GB/s</div>
+                      <div className="text-lg">{formatBandwidth(recommendedConfig.totalBandwidth)}</div>
                     </div>
                     <div>
                       <span className="font-medium">Total Power:</span>
@@ -955,7 +1053,7 @@ const Form: React.FC<FormProps> = ({ hardwareSpecs: initialHardwareSpecs, formDa
                     </div>
                     <div>
                       <span className="font-medium">Storage/Server:</span>
-                      <div className="text-lg">{recommendedConfig.storagePerServer.toFixed(1)} TB</div>
+                      <div className="text-lg">{formatCapacity(recommendedConfig.storagePerServer)}</div>
                     </div>
                   </div>
                 </div>
@@ -988,25 +1086,36 @@ const Form: React.FC<FormProps> = ({ hardwareSpecs: initialHardwareSpecs, formDa
             </div>
           )}
 
-          {/* Erasure Coding Info */}
-          <div className="bg-gray-50 p-6 rounded-lg">
-            <h3 className="text-lg font-semibold mb-3">Erasure Coding Information</h3>
-            {formData.erasureCoding && hardwareSpecs.erasure_coding.schemes[formData.erasureCoding] && (
-              <div className="text-sm space-y-2">
-                {(() => {
-                  const scheme = hardwareSpecs.erasure_coding.schemes[formData.erasureCoding];
-                  return (
-                    <>
-                      <p><strong>Scheme:</strong> {formData.erasureCoding}</p>
-                      <p><strong>Efficiency:</strong> {Math.round(scheme.efficiency * 100)}%</p>
-                      <p><strong>Fault Tolerance:</strong> {scheme.fault_tolerance} drives</p>
-                      <p><strong>Minimum Drives:</strong> {scheme.min_drives}</p>
-                    </>
-                  );
-                })()}
-              </div>
-            )}
-          </div>
+          {/* Erasure Coding Validation - Only show if configuration is meaningfully selected */}
+          {(ecValidation.warnings.length > 0 || ecValidation.errors.length > 0) && 
+           formData.vendor && formData.serverSize && formData.driveCapacity && 
+           (formData.numServers > 0 || formData.numStorageDrives > 0) && (
+            <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
+              <h3 className="text-lg font-semibold mb-3 text-yellow-800">Erasure Coding Validation</h3>
+              
+              {ecValidation.errors.length > 0 && (
+                <div className="mb-3">
+                  <h4 className="font-medium text-red-700 mb-2">❌ Errors:</h4>
+                  <ul className="list-disc pl-5 text-sm text-red-600 space-y-1">
+                    {ecValidation.errors.map((error, index) => (
+                      <li key={index}>{error}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              
+              {ecValidation.warnings.length > 0 && (
+                <div>
+                  <h4 className="font-medium text-yellow-700 mb-2">⚠️ Warnings:</h4>
+                  <ul className="list-disc pl-5 text-sm text-yellow-600 space-y-1">
+                    {ecValidation.warnings.map((warning, index) => (
+                      <li key={index}>{warning}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>

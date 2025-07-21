@@ -125,6 +125,13 @@ export interface HardwareSpecs {
       };
     };
   }
+
+  /**
+   * Get recommended default erasure coding scheme (should be recommended)
+   */
+  export function getDefaultErasureCodingScheme(): string {
+    return 'EC8:3'; // Default to recommended EC8:3
+  }
   
   export interface SizeCategorySpec {
     description: string;

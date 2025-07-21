@@ -3,7 +3,7 @@ import Form from './components/Form';
 import RackVisualization from './components/RackVisualization';
 import FieldArchitectRecommendations from './components/FieldArchitectRecommendations';
 import { loadHardwareSpecs, HardwareSpecs } from './utils/dataLoader';
-import { ConfigurationResult } from './utils/calculations';
+import { ConfigurationResult, formatCapacity, formatBandwidth } from './utils/calculations';
 import './App.css';
 
 interface FormData {
@@ -200,7 +200,7 @@ const App: React.FC = () => {
                   </span>
                   <span className="mx-2">•</span>
                   <span className="font-medium">
-                    {state.currentConfig.usableCapacityTB.toFixed(1)}TB usable
+                    {formatCapacity(state.currentConfig.usableCapacityTB)} usable
                   </span>
                 </div>
               )}
@@ -289,9 +289,11 @@ const App: React.FC = () => {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="text-center">
                   <div className="text-3xl font-bold text-blue-600">
-                    {state.currentConfig.performance.aggregateBandwidthGBps.toFixed(1)}
+                    {formatBandwidth(state.currentConfig.performance.aggregateBandwidthGBps).split(' ')[0]}
                   </div>
-                  <div className="text-sm text-gray-600">GB/s Bandwidth</div>
+                  <div className="text-sm text-gray-600">
+                    {formatBandwidth(state.currentConfig.performance.aggregateBandwidthGBps).split(' ')[1]} Bandwidth
+                  </div>
                 </div>
                 <div className="text-center">
                   <div className="text-3xl font-bold text-green-600">
@@ -381,11 +383,11 @@ const App: React.FC = () => {
                   </div>
                   <div>
                     <span className="font-medium">Raw Capacity:</span>
-                    <div>{state.currentConfig.rawCapacityTB.toFixed(1)} TB</div>
+                    <div>{formatCapacity(state.currentConfig.rawCapacityTB)}</div>
                   </div>
                   <div>
                     <span className="font-medium">Usable Capacity:</span>
-                    <div>{state.currentConfig.usableCapacityTB.toFixed(1)} TB</div>
+                    <div>{formatCapacity(state.currentConfig.usableCapacityTB)}</div>
                   </div>
                   <div>
                     <span className="font-medium">Efficiency:</span>
